@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Visual + Saúde | Acessibilidade e Cuidado Global</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- TensorFlow (IA de Visão) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+  
+  <!-- Tesseract.js (OCR) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+  <!-- PDF.js (Leitura Visual Anti-Bloqueio e Áudio) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+  <!-- Configuração de Cores -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              blue: '#0A3B7C', lightBlue: '#E8F1FF',
+              green: '#00A859', lightGreen: '#E6F7ED',
+              teal: '#2a9d8f',
+              purple: '#9C27B0', lightPurple: '#F3E5F5',
+              orange: '#FF9800', lightOrange: '#FFF3E0',
+              red: '#E53935', lightRed: '#FFEBEE',
+              warm: '#fff8f0'
+            }
+          },
+          fontFamily: {
+            'dyslexic': ['"Comic Sans MS"', 'cursive', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Inter', Arial, sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; overflow-x: hidden; transition: filter 0.3s ease, font-size 0.3s ease; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    .nav-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 10px; border-radius: 16px; transition: all 0.3s ease; }
+    .nav-btn.active { background-color: #E8F1FF; color: #0A3B7C; }
+    .nav-btn.active i { transform: scale(1.15); }
+    
+    .subtab-btn { white-space: nowrap; padding: 10px 18px; border-radius: 20px; font-size: 13px; font-weight: 700; transition: all 0.2s; color: #6b7280; background: white; border: 1px solid #e5e7eb; }
+    .subtab-btn.active { background: #0A3B7C; color: white; border-color: #0A3B7C; box-shadow: 0 4px 10px rgba(10, 59, 124, 0.2); }
+
+    .camera-container { width: 100%; height: 45vh; background: #000; border-radius: 24px; position: relative; overflow: hidden; }
+    .camera-container video { width: 100%; height: 100%; object-fit: cover; }
+    
+    .sidebar-open { transform: translateX(0); }
+    .sidebar-closed { transform: translateX(-100%); }
+
+    body.a11y-dyslexia * { font-family: 'Comic Sans MS', 'Chalkboard SE', cursive, sans-serif !important; letter-spacing: 0.05em !important; word-spacing: 0.1em !important; line-height: 1.6 !important; }
+    body.a11y-autism { filter: sepia(0.3) saturate(0.8) !important; }
+    body.a11y-contrast { filter: contrast(130%) saturate(120%) !important; }
+    body.a11y-text-lg { font-size: 110% !important; }
+    body.a11y-text-xl { font-size: 125% !important; }
+    
+    #camera-container-wrapper:fullscreen { border-radius: 0; height: 100vh; width: 100vw; display: flex; flex-direction: column; justify-content: center; background: black; }
+    #camera-container-wrapper:fullscreen .camera-container { height: 100vh; border-radius: 0; border: none; }
+  </style>
+</head>
+<body class="text-gray-800 antialiased flex justify-center relative" onclick="closePopupsOnClickOutside(event)">
+
+  <!-- OVERLAY E SIDEBAR -->
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-50 hidden backdrop-blur-sm transition-opacity" onclick="toggleSidebar()"></div>
+  <aside id="sidebar" class="fixed top-0 left-0 w-72 h-full bg-white z-[60] sidebar-closed transition-transform duration-300 ease-in-out shadow-2xl flex flex-col">
+    <div class="bg-white p-6 border-b border-gray-100 flex flex-col items-center relative">
+      <button onclick="toggleSidebar()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-2"><i class="fa-solid fa-xmark text-2xl"></i></button>
+      <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj_7ipBXfqF3tkYzJfNe3Vr9PpL5yPTjbpnlyJfYZI6uxt-oT1DJRuT43OjxYuaPc4UaNWJls0l3cZO_tDE5YMsQtq8b42iudjvkcawLNYMViVWbd3MT-YRfgGZ3Q1C_GgBYBX9qzCDsPVFzAsKO56dCYcQ4lYSPIhdEtHP6JD1liWWBNI2Z3UZxuKbdXu7/s1600/c6c5baf0-e4f1-408b-9a1a-1491d5300a10-removebg-preview.png" alt="Logo" class="w-36 h-auto object-contain mt-4">
+      <p class="text-xs text-brand-blue font-bold mt-2">Cuidado e Inclusão</p>
+    </div>
+    
+    <div class="p-4 flex-1 overflow-y-auto space-y-4">
+      <div class="bg-gray-50 rounded-2xl p-4 border border-gray-200">
+        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3"><i class="fa-solid fa-compass mr-1"></i> Ir para</p>
+        <div class="space-y-2">
+          <button onclick="navFromMenu('visao', 'camera')" class="w-full text-left bg-white text-gray-700 font-bold py-3 px-3 rounded-xl text-sm shadow-sm hover:text-brand-teal transition"><i class="fa-solid fa-eye w-6 text-brand-teal"></i> Câmera Inteligente</button>
+          <button onclick="navFromMenu('saude', 'remedios')" class="w-full text-left bg-white text-gray-700 font-bold py-3 px-3 rounded-xl text-sm shadow-sm hover:text-brand-green transition"><i class="fa-solid fa-robot w-6 text-brand-green"></i> Bula IA (Farmácia)</button>
+          <button onclick="navFromMenu('social', 'feed')" class="w-full text-left bg-white text-gray-700 font-bold py-3 px-3 rounded-xl text-sm shadow-sm hover:text-brand-orange transition"><i class="fa-solid fa-users w-6 text-brand-orange"></i> Rede Solidária (Feed)</button>
+          <button onclick="navFromMenu('cursos', 'aulas')" class="w-full text-left bg-white text-gray-700 font-bold py-3 px-3 rounded-xl text-sm shadow-sm hover:text-indigo-500 transition"><i class="fa-solid fa-graduation-cap w-6 text-indigo-500"></i> Escola de Voluntários</button>
+          <button onclick="navFromMenu('inspiracao', 'mensagens')" class="w-full text-left bg-white text-gray-700 font-bold py-3 px-3 rounded-xl text-sm shadow-sm hover:text-brand-blue transition"><i class="fa-solid fa-heart w-6 text-brand-blue"></i> Mensagens e Poesias</button>
+          <button onclick="navFromMenu('inspiracao', 'app')" class="w-full text-left bg-white text-gray-700 font-bold py-3 px-3 rounded-xl text-sm shadow-sm hover:text-brand-blue transition"><i class="fa-solid fa-circle-info w-6 text-brand-blue"></i> Sobre o Projeto</button>
+        </div>
+      </div>
+
+      <div class="bg-brand-lightBlue rounded-2xl p-4 border border-blue-200 shadow-sm flex justify-between items-center">
+        <div>
+          <h4 class="font-bold text-brand-blue text-sm"><i class="fa-solid fa-volume-high mr-1"></i> Guia por Voz</h4>
+          <p class="text-[10px] text-blue-600">Ler abas em voz alta</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="voice-toggle-menu" class="sr-only peer" onchange="toggleGlobalSoundMenu(this)">
+          <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-blue"></div>
+        </label>
+      </div>
+
+      <div class="bg-gray-50 rounded-2xl p-4 border border-gray-200">
+        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3"><i class="fa-solid fa-universal-access mr-1"></i> Acessibilidade Visual</p>
+        <div class="space-y-2">
+          <button onclick="toggleA11yFeature('dyslexia')" class="w-full text-left bg-white text-gray-700 font-bold py-2 px-3 rounded-lg text-sm border border-gray-200 shadow-sm hover:bg-gray-100 transition"><i class="fa-solid fa-glasses w-6 text-brand-purple"></i> Fonte Dislexia</button>
+          <button onclick="toggleA11yFeature('autism')" class="w-full text-left bg-white text-gray-700 font-bold py-2 px-3 rounded-lg text-sm border border-gray-200 shadow-sm hover:bg-gray-100 transition"><i class="fa-solid fa-palette w-6 text-brand-purple"></i> Cores Suaves</button>
+          <button onclick="toggleA11yFeature('contrast')" class="w-full text-left bg-white text-gray-700 font-bold py-2 px-3 rounded-lg text-sm border border-gray-200 shadow-sm hover:bg-gray-100 transition"><i class="fa-solid fa-circle-half-stroke w-6 text-brand-purple"></i> Alto Contraste</button>
+          <div class="flex gap-2 pt-2 border-t border-gray-200 mt-2">
+            <button onclick="toggleA11yFeature('text+')" class="flex-1 bg-white text-gray-700 font-bold py-2 rounded-lg text-sm border border-gray-200 shadow-sm hover:bg-gray-100"><i class="fa-solid fa-plus mr-1"></i> Texto</button>
+            <button onclick="toggleA11yFeature('text-')" class="flex-1 bg-white text-gray-700 font-bold py-2 rounded-lg text-sm border border-gray-200 shadow-sm hover:bg-gray-100"><i class="fa-solid fa-minus mr-1"></i> Texto</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTAINER PRINCIPAL -->
+  <div class="w-full max-w-md bg-white min-h-screen shadow-2xl relative flex flex-col overflow-hidden pb-32">
+    
+    <!-- CABEÇALHO -->
+    <header class="bg-white px-5 py-4 shadow-sm z-10 flex justify-between items-center border-b border-gray-100 rounded-b-3xl sticky top-0">
+      <button onclick="toggleSidebar()" class="text-gray-600 hover:text-brand-blue hover:bg-brand-lightBlue w-12 h-12 rounded-full flex items-center justify-center text-2xl transition">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      
+      <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj_7ipBXfqF3tkYzJfNe3Vr9PpL5yPTjbpnlyJfYZI6uxt-oT1DJRuT43OjxYuaPc4UaNWJls0l3cZO_tDE5YMsQtq8b42iudjvkcawLNYMViVWbd3MT-YRfgGZ3Q1C_GgBYBX9qzCDsPVFzAsKO56dCYcQ4lYSPIhdEtHP6JD1liWWBNI2Z3UZxuKbdXu7/s1600/c6c5baf0-e4f1-408b-9a1a-1491d5300a10-removebg-preview.png" 
+           alt="Logo" class="h-16 w-auto object-contain cursor-pointer" onclick="falarTexto('Visual mais Saúde. Cuidando de você.', true)">
+      
+      <!-- BOTÃO DE PDF NO CABEÇALHO -->
+      <label class="text-brand-purple hover:bg-purple-50 w-12 h-12 rounded-full flex items-center justify-center text-2xl transition cursor-pointer shadow-sm border border-purple-100" title="Ler Arquivo PDF">
+        <i class="fa-solid fa-file-pdf"></i>
+        <input type="file" accept="application/pdf" class="hidden" onchange="abrirNativoPDF(event)">
+      </label>
+    </header>
+
+    <!-- ÁREA DE CONTEÚDO PRINCIPAL -->
+    <main class="flex-1 overflow-y-auto no-scrollbar p-4">
+
+      <!-- ========================================== -->
+      <!-- ABA 1: VISÃO IA E OCR                      -->
+      <!-- ========================================== -->
+      <section id="tab-visao" class="tab-content block">
+        <h2 class="text-2xl font-black text-gray-800 mb-4 border-l-4 border-brand-teal pl-3">Assistente de Visão</h2>
+        <div class="flex overflow-x-auto no-scrollbar gap-2 mb-5 pb-1">
+          <button onclick="switchSubTab('visao', 'camera')" id="subtab-visao-camera" class="subtab-btn active bg-brand-teal text-white border-brand-teal">Câmera Inteligente</button>
+          <button onclick="switchSubTab('visao', 'ocr')" id="subtab-visao-ocr" class="subtab-btn">Ler Documentos</button>
+        </div>
+
+        <div id="content-visao-camera" class="sub-content block">
+          <div id="camera-container-wrapper" class="relative">
+            <div class="camera-container border-4 border-gray-800 shadow-xl">
+              <video id="video-ia" autoplay muted playsinline></video>
+              <div id="output-ia" class="absolute top-4 left-1/2 transform -translate-x-1/2 w-11/12 bg-brand-teal/90 text-white p-3 rounded-xl text-center font-bold border-2 border-white shadow-lg z-20">Câmera pronta</div>
+              <div class="absolute bottom-0 w-full bg-black/80 backdrop-blur-md p-4 flex justify-between items-center rounded-b-xl">
+                <button id="btn-power-cam" onclick="togglePowerCamera()" class="text-white text-xl w-12 h-12 bg-brand-green rounded-full hover:bg-green-600 shadow-md transition-colors"><i class="fa-solid fa-power-off"></i></button>
+                <div class="flex gap-3">
+                  <button onclick="flipCamera()" class="text-white text-lg w-12 h-12 bg-white/20 rounded-full hover:bg-white/40 shadow-sm transition"><i class="fa-solid fa-camera-rotate"></i></button>
+                  <button onclick="toggleFullscreenIA()" class="text-white text-lg w-12 h-12 bg-white/20 rounded-full hover:bg-white/40 shadow-sm transition"><i class="fa-solid fa-expand"></i></button>
+                </div>
+                <select id="languageSelector" onchange="falarTexto('Idioma alterado', true)" class="bg-gray-800 text-white font-bold border border-gray-600 rounded-xl p-2 text-xs outline-none w-24">
+                  <option value="pt">🇧🇷 PT</option>
+                  <option value="en">🇺🇸 EN</option>
+                  <option value="es">🇪🇸 ES</option>
+                  <option value="fr">🇫🇷 FR</option>
+                  <option value="de">🇩🇪 DE</option>
+                  <option value="it">🇮🇹 IT</option>
+                  <option value="zh">🇨🇳 ZH</option>
+                  <option value="ja">🇯🇵 JA</option>
+                  <option value="ko">🇰🇷 KO</option>
+                  <option value="hi">🇮🇳 HI</option>
+                  <option value="ar">🇸🇦 AR</option>
+                  <option value="ru">🇷🇺 RU</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="content-visao-ocr" class="sub-content hidden">
+          <div class="bg-white rounded-3xl p-6 shadow-md border border-gray-100 text-center">
+            <div class="w-20 h-20 bg-brand-lightBlue text-brand-blue rounded-full flex items-center justify-center text-3xl mx-auto mb-4"><i class="fa-solid fa-camera"></i></div>
+            <h3 class="font-bold text-gray-800 text-lg mb-2">Leitor de Fotos</h3>
+            <p class="text-sm text-gray-500 mb-6">Tire foto de receitas ou placas para a IA ler em voz alta para você.</p>
+            <label class="bg-brand-blue text-white w-full py-4 rounded-2xl font-bold cursor-pointer hover:bg-blue-800 transition flex items-center justify-center gap-2 shadow-lg">
+              <i class="fa-solid fa-camera text-xl"></i> Abrir Câmera
+              <input type="file" id="ocr-input" accept="image/*" class="hidden" onchange="processOCR(event)">
+            </label>
+            <div id="ocr-loading" class="hidden mt-6 text-brand-blue font-bold text-sm"><i class="fa-solid fa-circle-notch fa-spin text-xl mr-2"></i> Lendo imagem...</div>
+            <div id="ocr-result-container" class="hidden mt-6 text-left">
+              <div id="ocr-text" class="bg-gray-50 p-5 rounded-2xl text-sm text-gray-800 border border-gray-200 min-h-[120px] whitespace-pre-wrap shadow-inner"></div>
+              <button onclick="falarTexto(document.getElementById('ocr-text').innerText, true)" class="mt-4 w-full bg-brand-teal text-white py-4 rounded-2xl font-bold shadow-md flex justify-center items-center gap-2">
+                <i class="fa-solid fa-volume-high text-xl"></i> Ouvir Texto
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- ABA 2: SAÚDE                               -->
+      <!-- ========================================== -->
+      <section id="tab-saude" class="tab-content hidden">
+        <h2 class="text-2xl font-black text-gray-800 mb-4 border-l-4 border-brand-green pl-3">Saúde Integrada</h2>
+        <div class="flex overflow-x-auto no-scrollbar gap-2 mb-5 pb-1">
+          <button onclick="switchSubTab('saude', 'triagem')" id="subtab-saude-triagem" class="subtab-btn active bg-brand-green text-white border-brand-green">Ficha Médica</button>
+          <button onclick="switchSubTab('saude', 'remedios')" id="subtab-saude-remedios" class="subtab-btn">Bula IA</button>
+        </div>
+
+        <div id="content-saude-triagem" class="sub-content block">
+          <form onsubmit="enviarTriagemWA(event)" class="bg-white p-6 rounded-3xl shadow-md border border-gray-100 space-y-5">
+            <h3 class="font-bold text-brand-green text-lg"><i class="fa-solid fa-notes-medical"></i> Enviar Sintomas</h3>
+            <div><input id="triagem-nome" required type="text" placeholder="Nome do Paciente" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none focus:border-brand-green"></div>
+            <div>
+              <select id="triagem-sintoma" required class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none focus:border-brand-green">
+                <option value="">Qual o sintoma?</option><option>Dor de Cabeça</option><option>Febre</option><option>Falta de Ar</option><option>Outros</option>
+              </select>
+            </div>
+            <button type="submit" class="w-full bg-brand-green text-white font-bold py-4 rounded-xl shadow-md transition hover:bg-green-700"><i class="fa-brands fa-whatsapp text-xl mr-2"></i> WhatsApp do Médico</button>
+          </form>
+        </div>
+
+        <div id="content-saude-remedios" class="sub-content hidden">
+          <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100 text-center">
+            <h3 class="font-bold text-gray-800 mb-2 text-lg"><i class="fa-solid fa-robot text-brand-green mr-2"></i> Farmacêutico Virtual</h3>
+            <div class="flex gap-2 mt-4">
+              <input id="input-remedio" type="text" placeholder="Ex: Losartana..." class="flex-1 bg-gray-50 border border-gray-200 p-4 rounded-xl text-sm outline-none">
+              <button onclick="consultarRemedioGemini()" class="bg-brand-green text-white px-6 rounded-xl font-bold shadow-md hover:bg-green-700"><i class="fa-solid fa-search"></i></button>
+            </div>
+            <div id="remedio-loading" class="hidden mt-6 text-brand-green font-bold text-sm"><i class="fa-solid fa-circle-notch fa-spin text-xl mb-2 block"></i> Consultando bula...</div>
+            <div id="remedio-result-container" class="hidden mt-6 text-left">
+              <div id="remedio-text" class="bg-brand-lightGreen p-5 rounded-2xl text-sm text-gray-800 border border-green-200 min-h-[100px] whitespace-pre-wrap gemini-response"></div>
+              <button onclick="falarTexto(document.getElementById('remedio-text').innerText, true)" class="mt-4 w-full bg-brand-green text-white py-4 rounded-xl font-bold shadow-md hover:bg-green-800 transition"><i class="fa-solid fa-volume-high mr-2"></i> Ouvir Bula</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- ABA 3: REDE SOLIDÁRIA                      -->
+      <!-- ========================================== -->
+      <section id="tab-social" class="tab-content hidden">
+        <h2 class="text-2xl font-black text-gray-800 mb-4 border-l-4 border-brand-orange pl-3">Rede Solidária</h2>
+        <div class="flex overflow-x-auto no-scrollbar gap-2 mb-5 pb-1">
+          <button onclick="switchSubTab('social', 'feed')" id="subtab-social-feed" class="subtab-btn active bg-brand-orange text-white border-brand-orange">Feed Social</button>
+          <button onclick="switchSubTab('social', 'cadastrar')" id="subtab-social-cadastrar" class="subtab-btn">Criar Postagem</button>
+        </div>
+
+        <div id="content-social-feed" class="sub-content block space-y-6">
+          <div class="bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden post-card">
+            <div class="p-4 flex items-center gap-4 bg-green-50 border-b border-green-100 relative">
+               <div class="absolute top-0 right-0 bg-brand-green text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl"><i class="fa-solid fa-hand-holding-heart"></i> GRÁTIS</div>
+               <img src="https://i.pravatar.cc/150?img=32" class="w-14 h-14 rounded-full border-2 border-brand-green object-cover shadow-sm">
+               <div>
+                 <h3 class="font-bold text-gray-800 text-lg leading-tight">Dra. Sofia Fernandes</h3>
+                 <p class="text-brand-green text-[10px] font-extrabold uppercase tracking-wider">Oftalmologista Voluntária</p>
+               </div>
+            </div>
+            <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80" class="w-full h-56 object-cover">
+            <div class="p-5">
+              <p class="text-sm text-gray-700 mb-5 leading-relaxed">"Olá comunidade! Meu consultório na Vila Mariana está de portas abertas nas sextas para exames gratuitos de vista para pessoas de baixa renda."</p>
+              <a href="https://wa.me/5519999187697" target="_blank" class="w-full bg-brand-green text-white py-4 rounded-xl font-bold shadow-md hover:bg-green-700 flex justify-center items-center gap-2 transition mb-5">
+                <i class="fa-brands fa-whatsapp text-xl"></i> Agendar Atendimento
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div id="content-social-cadastrar" class="sub-content hidden">
+          <form onsubmit="event.preventDefault(); alert('Postagem enviada!'); switchSubTab('social','feed'); falarTexto('Publicado.', true);" class="bg-white p-6 rounded-3xl shadow-md border border-gray-100 space-y-4">
+            <div>
+              <label class="text-xs font-bold text-brand-blue block mb-1 uppercase">O que você é?</label>
+              <select id="cad-tipo" onchange="toggleCadastroType()" class="w-full bg-blue-50 border border-blue-200 text-brand-blue font-bold rounded-xl p-4 text-sm outline-none">
+                <option value="medico">Médico / Especialista</option>
+                <option value="ong">ONG / Instituição</option>
+                <option value="guia">Guia Voluntário</option>
+              </select>
+            </div>
+            <div><input required type="text" placeholder="Nome ou Razão Social" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none"></div>
+            <div><input type="file" accept="image/*" required class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2 text-sm text-gray-500 cursor-pointer"></div>
+            <div><textarea required rows="3" placeholder="Descrição do Post" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none"></textarea></div>
+            <button type="submit" class="w-full bg-brand-orange text-white font-bold py-4 rounded-xl shadow-md transition text-lg mt-2">Publicar no Feed</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- ABA 4: ESCOLA VOLUNTÁRIA E CANAL MÉDICO    -->
+      <!-- ========================================== -->
+      <section id="tab-cursos" class="tab-content hidden">
+        <h2 class="text-2xl font-black text-gray-800 mb-4 border-l-4 border-indigo-500 pl-3">Escola Voluntária</h2>
+        
+        <!-- SUB-ABAS DA ESCOLA (RESTAURADAS E APRIMORADAS) -->
+        <div class="flex overflow-x-auto no-scrollbar gap-2 mb-5 pb-1">
+          <button onclick="switchSubTab('cursos', 'aulas')" id="subtab-cursos-aulas" class="subtab-btn active bg-indigo-500 text-white border-indigo-500">Aulas Rápidas</button>
+          <button onclick="switchSubTab('cursos', 'videos')" id="subtab-cursos-videos" class="subtab-btn">Canal Médico</button>
+          <button onclick="switchSubTab('cursos', 'publicar')" id="subtab-cursos-publicar" class="subtab-btn">Publicar Vídeo</button>
+        </div>
+
+        <!-- 1. CONTEÚDO: AULAS BÁSICAS -->
+        <div id="content-cursos-aulas" class="sub-content block space-y-5">
+          <div class="bg-white rounded-3xl border border-gray-100 p-6 shadow-md">
+            <div class="flex items-center gap-4 mb-4 border-b border-gray-100 pb-4">
+              <div class="w-14 h-14 bg-indigo-50 rounded-full flex justify-center items-center text-indigo-500 text-2xl shrink-0"><i class="fa-solid fa-hand-holding-heart"></i></div>
+              <h4 class="font-bold text-gray-800 text-lg">Empatia na Prática</h4>
+            </div>
+            <div id="curso-1" class="text-sm text-gray-600 leading-relaxed mb-5 space-y-3">
+              <p>Ao encontrar uma pessoa com deficiência visual na rua, a regra de ouro é o <strong>respeito à autonomia</strong>. Nunca puxe a pessoa pelo braço; isso pode causar perda de equilíbrio e assustá-la.</p>
+              <p>Chegue perto, identifique-se e pergunte: "Olá, você precisa de ajuda?". Se a resposta for sim, ofereça o seu cotovelo para que ela possa segurar.</p>
+            </div>
+            <button onclick="falarTexto(document.getElementById('curso-1').innerText, true)" class="w-full bg-indigo-50 text-indigo-600 border border-indigo-200 font-bold py-3 rounded-xl flex justify-center items-center gap-2 hover:bg-indigo-100 transition"><i class="fa-solid fa-volume-high"></i> Ouvir Aula</button>
+          </div>
+          
+          <div class="bg-gray-800 rounded-3xl border border-gray-700 p-6 shadow-xl text-center text-white mt-6">
+            <div class="w-16 h-16 bg-white/10 rounded-full flex justify-center items-center text-white text-2xl shrink-0 mx-auto mb-4"><i class="fa-solid fa-landmark"></i></div>
+            <h4 class="font-bold text-xl mb-2">Cursos Oficiais (Governo)</h4>
+            <p class="text-sm text-gray-300 leading-relaxed mb-6">Acesse os cursos gratuitos da Escola Virtual de Governo.</p>
+            <div class="space-y-3">
+              <a href="https://www.escolavirtual.gov.br/" target="_blank" class="block w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition shadow-md">
+                <i class="fa-solid fa-hands mr-2"></i> LIBRAS (Básico)
+              </a>
+              <a href="https://www.escolavirtual.gov.br/" target="_blank" class="block w-full bg-brand-teal text-white font-bold py-4 rounded-xl hover:bg-teal-600 transition shadow-md">
+                <i class="fa-solid fa-wheelchair mr-2"></i> Acessibilidade
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. CONTEÚDO: CANAL MÉDICO (VÍDEOS DO YOUTUBE) -->
+        <div id="content-cursos-videos" class="sub-content hidden space-y-6 pb-6">
+          <div class="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 text-center">
+            <h3 class="font-bold text-indigo-800 text-lg mb-2">Sua Dose de Saúde 💙</h3>
+            <p class="text-sm text-indigo-600">Aqui seus amigos médicos postaram vídeos com dicas preciosas para o seu dia a dia.</p>
+          </div>
+
+          <!-- Video 1 -->
+          <div class="bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
+             <div class="w-full aspect-video">
+               <iframe class="w-full h-full" src="https://www.youtube.com/embed/lXj9o0ZLMrc?si=UjJ1DR27v6IeWBt-" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+             </div>
+             <div class="p-4">
+               <p class="text-xs font-bold text-indigo-500 uppercase tracking-wide">Saúde Mental</p>
+               <h4 class="font-bold text-gray-800">Dicas com o Especialista</h4>
+               <p class="text-xs text-gray-500 mt-2"><i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i> Dica de Ouro: Tire pausas de 5 minutos a cada hora de trabalho para respirar profundamente e descansar a mente.</p>
+             </div>
+          </div>
+
+          <!-- Video 2 -->
+          <div class="bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
+             <div class="w-full aspect-video">
+               <iframe class="w-full h-full" src="https://www.youtube.com/embed/J7XMC_u9YBU?si=IHWH8E7ObL6fKIv5" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+             </div>
+             <div class="p-4">
+               <p class="text-xs font-bold text-indigo-500 uppercase tracking-wide">Neurociência</p>
+               <h4 class="font-bold text-gray-800">Como Proteger o Cérebro</h4>
+               <p class="text-xs text-gray-500 mt-2"><i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i> Dica de Ouro: Uma boa noite de sono reparador é o melhor remédio para proteger a sua memória a longo prazo.</p>
+             </div>
+          </div>
+
+          <!-- Video 3 -->
+          <div class="bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
+             <div class="w-full aspect-video">
+               <iframe class="w-full h-full" src="https://www.youtube.com/embed/fhIbb1E-P64?si=1zalRcLQf53wgSxP" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+             </div>
+             <div class="p-4">
+               <p class="text-xs font-bold text-indigo-500 uppercase tracking-wide">Prevenção</p>
+               <h4 class="font-bold text-gray-800">Hábitos Saudáveis</h4>
+               <p class="text-xs text-gray-500 mt-2"><i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i> Dica de Ouro: Beba água constantemente ao longo do dia. O seu cérebro precisa de hidratação para focar!</p>
+             </div>
+          </div>
+
+          <!-- Video 4 -->
+          <div class="bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
+             <div class="w-full aspect-video">
+               <iframe class="w-full h-full" src="https://www.youtube.com/embed/DbGwjBteQNs?si=O9lEdwYhToe_Z0Na" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+             </div>
+             <div class="p-4">
+               <p class="text-xs font-bold text-indigo-500 uppercase tracking-wide">Bem-Estar</p>
+               <h4 class="font-bold text-gray-800">Controle da Ansiedade</h4>
+               <p class="text-xs text-gray-500 mt-2"><i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i> Dica de Ouro: Ansiedade e depressão não são frescura. Procure sempre ajuda profissional e nunca se automedique.</p>
+             </div>
+          </div>
+
+          <!-- Video 5 -->
+          <div class="bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden">
+             <div class="w-full aspect-video">
+               <iframe class="w-full h-full" src="https://www.youtube.com/embed/TZaKvyjh5dU?si=RCUQY1f7w4d4E4li" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+             </div>
+             <div class="p-4">
+               <p class="text-xs font-bold text-indigo-500 uppercase tracking-wide">Qualidade de Vida</p>
+               <h4 class="font-bold text-gray-800">O Poder do Movimento</h4>
+               <p class="text-xs text-gray-500 mt-2"><i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i> Dica de Ouro: O corpo em movimento gera bem-estar. Tente caminhar pelo menos 15 minutos por dia!</p>
+             </div>
+          </div>
+        </div>
+
+        <!-- 3. CONTEÚDO: FORMULÁRIO DE PUBLICAÇÃO ANTI-SPAM (MÉDICOS) -->
+        <div id="content-cursos-publicar" class="sub-content hidden">
+          <div class="bg-white rounded-3xl shadow-md border border-gray-100 p-6 space-y-4">
+             <div class="text-center mb-6">
+               <div class="w-16 h-16 bg-brand-lightBlue text-brand-blue rounded-full flex justify-center items-center text-2xl mx-auto mb-3"><i class="fa-solid fa-user-doctor"></i></div>
+               <h3 class="font-bold text-gray-800">Você é Profissional da Saúde?</h3>
+               <p class="text-xs text-gray-500 mt-2">Ajude nossa comunidade! Poste os links de seus vídeos educativos do YouTube aqui.</p>
+             </div>
+             
+             <!-- Aviso de Curadoria (Anti-Spam) -->
+             <div class="bg-orange-50 border-l-4 border-orange-500 p-3 text-xs text-orange-800 mb-4 rounded-r-lg">
+                <strong><i class="fa-solid fa-shield-halved"></i> Combate ao Spam:</strong> Para proteger nossos usuários, exigimos registro profissional (CRM, CRP, etc). Nossa equipe médica fará a curadoria do seu vídeo antes dele ir para o ar.
+             </div>
+
+             <form onsubmit="event.preventDefault(); alert('Vídeo enviado para curadoria! Obrigado pela sua contribuição.'); switchSubTab('cursos','videos'); falarTexto('Enviado para curadoria.', true);" class="space-y-4">
+               <div><input required type="text" placeholder="Seu Nome Completo" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none"></div>
+               <div><input required type="text" placeholder="Registro Profissional (Ex: CRM 12345)" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none"></div>
+               <div><input required type="url" placeholder="Link do Vídeo no YouTube (Ex: youtube.com/watch...)" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none"></div>
+               <div><textarea required rows="2" placeholder="Deixe uma Dica Rápida sobre o tema deste vídeo" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none"></textarea></div>
+               <button type="submit" class="w-full bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-md transition text-lg mt-2 hover:bg-indigo-600"><i class="fa-solid fa-cloud-arrow-up mr-2"></i> Enviar para Curadoria</button>
+             </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- ABA 5: INSPIRAÇÃO E SOBRE O PROJETO        -->
+      <!-- ========================================== -->
+      <section id="tab-inspiracao" class="tab-content hidden">
+        <h2 class="text-2xl font-black text-gray-800 mb-4 border-l-4 border-brand-blue pl-3">Inspiração</h2>
+        
+        <div class="flex overflow-x-auto no-scrollbar gap-2 mb-5 pb-1">
+          <button onclick="switchSubTab('inspiracao', 'app')" id="subtab-inspiracao-app" class="subtab-btn active bg-brand-blue text-white border-brand-blue">O Projeto & Criador</button>
+          <button onclick="switchSubTab('inspiracao', 'mensagens')" id="subtab-inspiracao-mensagens" class="subtab-btn">Mensagens</button>
+          <button onclick="switchSubTab('inspiracao', 'biblia')" id="subtab-inspiracao-biblia" class="subtab-btn">Bíblia</button>
+        </div>
+
+        <!-- MENSAGENS INSPIRADORAS (AS 8 MENSAGENS INTACTAS) -->
+        <div id="content-inspiracao-mensagens" class="sub-content hidden space-y-6 pb-6">
+          <div class="bg-gradient-to-br from-brand-blue to-blue-500 p-6 rounded-3xl shadow-lg relative text-white">
+            <i class="fa-solid fa-quote-left text-4xl opacity-30 absolute top-5 left-5"></i>
+            <p id="msg-0" class="text-lg font-medium italic mt-8 leading-relaxed">"Cada dia é uma tela em branco; pinte o seu futuro e que, através da ação e motivação, você consiga realizar todos os seus objetivos."</p>
+            <div class="mt-6 text-right"><p class="font-black tracking-wide text-sm">- Henrique Bertulino da Silva</p></div>
+            <button onclick="falarTexto(document.getElementById('msg-0').innerText, true)" class="absolute bottom-5 left-5 bg-white/20 hover:bg-white/40 w-12 h-12 rounded-full flex justify-center items-center transition"><i class="fa-solid fa-volume-high text-lg"></i></button>
+          </div>
+          
+          <div class="bg-gradient-to-br from-brand-orange to-red-500 p-6 rounded-3xl shadow-lg relative text-white">
+            <i class="fa-solid fa-quote-left text-4xl opacity-30 absolute top-5 left-5"></i>
+            <p id="msg-1" class="text-lg font-medium italic mt-8 leading-relaxed">"Nas tempestades mais difíceis, descubra a força que reside na sua fé. O escuro da noite só existe para provar que a luz do amanhecer é inevitável."</p>
+            <div class="mt-6 text-right"><p class="font-black tracking-wide text-sm">- Henrique Bertulino da Silva</p></div>
+            <button onclick="falarTexto(document.getElementById('msg-1').innerText, true)" class="absolute bottom-5 left-5 bg-white/20 hover:bg-white/40 w-12 h-12 rounded-full flex justify-center items-center transition"><i class="fa-solid fa-volume-high text-lg"></i></button>
+          </div>
+
+          <div class="bg-gradient-to-br from-teal-500 to-emerald-600 p-6 rounded-3xl shadow-lg relative text-white">
+            <i class="fa-solid fa-quote-left text-4xl opacity-30 absolute top-5 left-5"></i>
+            <p id="msg-2" class="text-lg font-medium italic mt-8 leading-relaxed">"Ser líder de si mesmo não é ser herói, mas aprender a reconhecer suas fragilidades e trabalhar para que elas não dominem o seu destino."</p>
+            <div class="mt-6 text-right"><p class="font-black tracking-wide text-sm">- Augusto Cury</p></div>
+            <button onclick="falarTexto(document.getElementById('msg-2').innerText, true)" class="absolute bottom-5 left-5 bg-white/20 hover:bg-white/40 w-12 h-12 rounded-full flex justify-center items-center transition"><i class="fa-solid fa-volume-high text-lg"></i></button>
+          </div>
+
+          <div class="bg-gradient-to-br from-brand-purple to-indigo-600 p-6 rounded-3xl shadow-lg relative text-white">
+            <i class="fa-solid fa-quote-left text-4xl opacity-30 absolute top-5 left-5"></i>
+            <p id="msg-3" class="text-lg font-medium italic mt-8 leading-relaxed">"A verdadeira visão vai além dos olhos físicos; é a alma que enxerga a esperança, que sente o abraço do cuidado e que constrói pontes de afeto onde havia dor."</p>
+            <div class="mt-6 text-right"><p class="font-black tracking-wide text-sm">- Henrique Bertulino da Silva</p></div>
+            <button onclick="falarTexto(document.getElementById('msg-3').innerText, true)" class="absolute bottom-5 left-5 bg-white/20 hover:bg-white/40 w-12 h-12 rounded-full flex justify-center items-center transition"><i class="fa-solid fa-volume-high text-lg"></i></button>
+          </div>
+
+          <div class="bg-gradient-to-br from-rose-400 to-pink-600 p-6 rounded-3xl shadow-lg relative text-white">
+            <i class="fa-solid fa-quote-left text-4xl opacity-30 absolute top-5 left-5"></i>
+            <p id="msg-4" class="text-lg font-medium italic mt-8 leading-relaxed">"Mesmo quando tudo parece desabar, cabe a mim decidir entre rir ou chorar, ir ou ficar, desistir ou lutar; porque descobri que o mais importante é o decidir."</p>
+            <div class="mt-6 text-right"><p class="font-black tracking-wide text-sm">- Cora Coralina</p></div>
+            <button onclick="falarTexto(document.getElementById('msg-4').innerText, true)" class="absolute bottom-5 left-5 bg-white/20 hover:bg-white/40 w-12 h-12 rounded-full flex justify-center items-center transition"><i class="fa-solid fa-volume-high text-lg"></i></button>
+          </div>
+
+          <div class="bg-gradient-to-br from-amber-500 to-orange-600 p-6 rounded-3xl shadow-lg relative text-white">
+            <i class="fa-solid fa-quote-left text-4xl opacity-30 absolute top-5 left-5"></i>
+            <p id="msg-5" class="text-lg font-medium italic mt-8 leading-relaxed">"O valor das coisas não está no tempo que elas duram, mas na intensidade com que acontecem. Por isso existem momentos inesquecíveis e pessoas incomparáveis."</p>
+            <div class="mt-6 text-right"><p class="font-black tracking-wide text-sm">- Fernando Pessoa</p></div>
+            <button onclick="falarTexto(document.getElementById('msg-5').innerText, true)" class="absolute bottom-5 left-5 bg-white/20 hover:bg-white/40 w-12 h-12 rounded-full flex justify-center items-center transition"><i class="fa-solid fa-volume-high text-lg"></i></button>
+          </div>
+
+          <div class="bg-gradient-to-br from-fuchsia-500 to-purple-700 p-6 rounded-3xl shadow-lg relative text-white">
+            <i class="fa-solid fa-quote-left text-4xl opacity-30 absolute top-5 left-5"></i>
+            <p id="msg-6" class="text-lg font-medium italic mt-8 leading-relaxed">"Renda-se, como eu me rendi. Mergulhe no que você não conhece como eu mergulhei. Não se preocupe em entender, viver ultrapassa qualquer entendimento."</p>
+            <div class="mt-6 text-right"><p class="font-black tracking-wide text-sm">- Clarice Lispector</p></div>
+            <button onclick="falarTexto(document.getElementById('msg-6').innerText, true)" class="absolute bottom-5 left-5 bg-white/20 hover:bg-white/40 w-12 h-12 rounded-full flex justify-center items-center transition"><i class="fa-solid fa-volume-high text-lg"></i></button>
+          </div>
+
+          <div class="bg-gradient-to-br from-gray-700 to-black p-6 rounded-3xl shadow-lg relative text-white">
+            <i class="fa-solid fa-quote-left text-4xl opacity-30 absolute top-5 left-5"></i>
+            <p id="msg-7" class="text-lg font-medium italic mt-8 leading-relaxed">"Educação não transforma o mundo. Educação muda as pessoas. Pessoas transformam o mundo."</p>
+            <div class="mt-6 text-right"><p class="font-black tracking-wide text-sm">- Paulo Freire</p></div>
+            <button onclick="falarTexto(document.getElementById('msg-7').innerText, true)" class="absolute bottom-5 left-5 bg-white/20 hover:bg-white/40 w-12 h-12 rounded-full flex justify-center items-center transition"><i class="fa-solid fa-volume-high text-lg"></i></button>
+          </div>
+        </div>
+
+        <!-- O PROJETO E AUTOR COM TEXTOS E REDES SOCIAIS -->
+        <div id="content-inspiracao-app" class="sub-content block space-y-6">
+          <div class="bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden p-6 text-center">
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj_7ipBXfqF3tkYzJfNe3Vr9PpL5yPTjbpnlyJfYZI6uxt-oT1DJRuT43OjxYuaPc4UaNWJls0l3cZO_tDE5YMsQtq8b42iudjvkcawLNYMViVWbd3MT-YRfgGZ3Q1C_GgBYBX9qzCDsPVFzAsKO56dCYcQ4lYSPIhdEtHP6JD1liWWBNI2Z3UZxuKbdXu7/s1600/c6c5baf0-e4f1-408b-9a1a-1491d5300a10-removebg-preview.png" 
+                 class="h-24 w-auto mx-auto mb-6 drop-shadow-md" alt="Logo Visual + Saúde">
+            <h2 class="text-2xl font-extrabold text-brand-blue mb-4">A Missão Visual + Saúde</h2>
+            <div id="texto-homenagem" class="text-sm text-gray-600 leading-relaxed text-justify bg-brand-lightBlue/30 p-5 rounded-2xl border border-blue-50 shadow-inner space-y-4">
+              <p>O <strong>Visual + Saúde</strong> nasceu de um sonho de tornar o mundo mais justo e igualitário. Não é apenas um aplicativo; é um abraço em forma de tecnologia. Nascido da vontade genuína de transformar vidas, este projeto carrega a essência de cuidar de quem mais necessita.</p>
+              <p>Nosso objetivo principal é usar a inovação — como a Inteligência Artificial e a leitura por voz — para quebrar barreiras do dia a dia. Queremos que pessoas com deficiência visual tenham autonomia para reconhecer objetos, ler bulas de remédios e navegar com independência.</p>
+              <p>Além da tecnologia de ponta, construímos uma poderosa rede solidária. Pacientes vulneráveis encontram aqui acolhimento médico, ONGs dedicadas e guias cidadãos prontos para ajudar, provando que a solidariedade não tem fronteiras.</p>
+              <p>Acreditamos firmemente que a tecnologia só alcança sua verdadeira grandeza quando é usada para incluir, proteger e espalhar gentileza. O Visual + Saúde é a prova viva de que uma ideia alimentada por ética e amor pode, de fato, melhorar o mundo.</p>
+            </div>
+            <button onclick="falarTexto(document.getElementById('texto-homenagem').innerText, true)" class="mt-5 w-full bg-brand-teal text-white font-bold py-3 rounded-xl shadow-sm hover:bg-teal-700 transition">
+              <i class="fa-solid fa-volume-high mr-2"></i> Ouvir a Nossa História
+            </button>
+          </div>
+
+          <div class="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden relative mt-6">
+            <div class="bg-gradient-to-r from-brand-blue via-blue-600 to-teal-500 h-28 relative"></div>
+            <div class="px-6 pb-8 text-center relative">
+              <img src="https://akamai.sscdn.co/uploadfile/letras/fotos/1/4/f/7/14f79eef4eef5df453f86515affba3c3.jpg" class="w-32 h-32 object-cover rounded-full border-[6px] border-white shadow-2xl mx-auto -mt-16 mb-4 relative z-10" alt="Henrique Bertulino da Silva">
+              <h2 class="text-2xl font-extrabold text-gray-800">Henrique Bertulino da Silva</h2>
+              <p class="text-[11px] font-bold text-brand-teal uppercase tracking-widest mb-6">Criador & Educador Digital</p>
+              <div id="texto-sobre-autor" class="text-sm text-gray-600 leading-relaxed text-justify bg-gray-50 p-5 rounded-2xl border border-gray-100 shadow-inner space-y-4 mb-6">
+                <p><strong>Henrique Bertulino da Silva</strong> é um web designer e educador digital com uma paixão inabalável por tecnologia e música. Nascido em 29 de setembro de 1997, Henrique desenvolveu desde cedo um interesse profundo por computadores e design.</p>
+                <p>Ele se formou em web design e encontrou uma maneira brilhante de unir suas paixões, integrando tecnologia, música e sólidos valores éticos em seu trabalho diário.</p>
+                <p>Com uma abordagem inovadora e acessível, Henrique dedica-se intensamente a promover uma internet ética e enriquecedora, onde o aprendizado e a gentileza são as verdadeiras prioridades. Seu objetivo maior é transformar a rede em um espaço que inspire mudanças sociais positivas e ofereça oportunidades reais de crescimento para as pessoas.</p>
+              </div>
+
+              <!-- AVALIAÇÃO -->
+              <div class="bg-brand-lightBlue rounded-2xl p-6 text-center shadow-sm border border-blue-200 mb-8">
+                <h3 class="font-black text-brand-blue text-lg mb-1">Você gostou do projeto?</h3>
+                <p class="text-xs text-blue-700 mb-4 font-medium">Deixe sua avaliação de 5 estrelas e ajude o Henrique a espalhar essa causa!</p>
+                <div class="flex justify-center gap-2 text-4xl text-gray-300" id="star-rating">
+                  <i class="fa-solid fa-star cursor-pointer hover:text-yellow-400 hover:scale-110 transition-transform" onclick="avaliarApp(1)"></i>
+                  <i class="fa-solid fa-star cursor-pointer hover:text-yellow-400 hover:scale-110 transition-transform" onclick="avaliarApp(2)"></i>
+                  <i class="fa-solid fa-star cursor-pointer hover:text-yellow-400 hover:scale-110 transition-transform" onclick="avaliarApp(3)"></i>
+                  <i class="fa-solid fa-star cursor-pointer hover:text-yellow-400 hover:scale-110 transition-transform" onclick="avaliarApp(4)"></i>
+                  <i class="fa-solid fa-star cursor-pointer hover:text-yellow-400 hover:scale-110 transition-transform" onclick="avaliarApp(5)"></i>
+                </div>
+                <div id="avaliacao-obrigado" class="hidden mt-4 bg-white text-brand-blue font-bold text-sm py-2 rounded-lg shadow-sm animate-pulse">
+                  Obrigado pela sua nota! 💙
+                </div>
+              </div>
+
+              <!-- REDES SOCIAIS RESTAURADAS AQUI! -->
+              <h3 class="font-bold text-gray-800 mb-3 text-sm">Acompanhe o Criador nas Redes:</h3>
+              <div class="flex flex-col gap-3 px-2">
+                <a href="https://instagram.com/henriquebertulinodasilva" target="_blank" class="bg-gradient-to-r from-pink-500 to-orange-400 text-white py-4 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 transition text-sm">
+                  <i class="fa-brands fa-instagram text-xl"></i> @henriquebertulinodasilva
+                </a>
+                <a href="https://facebook.com/HenriqueBertulinoDaSilva" target="_blank" class="bg-[#1877F2] text-white py-4 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 transition text-sm">
+                  <i class="fa-brands fa-facebook text-xl"></i> Henrique Bertulino da Silva
+                </a>
+              </div>
+
+              <p class="text-[10px] text-gray-400 mt-6 pt-4 border-t border-gray-100">CNPJ: 62.980.927/0001-92</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="content-inspiracao-biblia" class="sub-content hidden">
+          <div class="bg-white rounded-3xl p-6 shadow-md border border-gray-100 mb-4">
+            <h3 class="font-bold text-gray-800 text-lg mb-3"><i class="fa-solid fa-book-bible text-brand-blue mr-2"></i> Livro Sagrado</h3>
+            <div class="flex gap-2">
+              <input type="text" id="bible-search" placeholder="Ex: Salmos 23:1" class="flex-1 p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-brand-blue">
+              <button onclick="buscarVersiculoNaAPI()" class="bg-brand-blue text-white px-6 rounded-xl font-bold shadow-md"><i class="fa-solid fa-search"></i></button>
+            </div>
+            <div id="api-result-box" class="hidden mt-5 p-5 bg-brand-warm rounded-2xl border border-orange-200 relative">
+              <p id="api-verse-text" class="text-base text-gray-800 italic mb-4 font-medium leading-relaxed"></p>
+              <span id="api-verse-ref" class="text-xs font-bold text-orange-600 bg-orange-100 px-3 py-1 rounded-full"></span>
+              <button onclick="falarTexto(document.getElementById('api-verse-text').innerText, true)" class="absolute bottom-4 right-4 text-orange-500 text-3xl hover:scale-110 transition"><i class="fa-solid fa-circle-play"></i></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- MENU INFERIOR PRINCIPAL -->
+    <nav class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-100 flex justify-between px-1 py-2 pb-6 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] z-40 rounded-t-3xl h-20">
+      <button onclick="switchMainTab('visao')" id="nav-visao" class="nav-btn w-1/5 active text-brand-blue"><i class="fa-solid fa-eye text-xl mb-1"></i><span class="text-[10px] font-bold mt-1">Visão</span></button>
+      <button onclick="switchMainTab('saude')" id="nav-saude" class="nav-btn w-1/5 text-gray-400"><i class="fa-solid fa-notes-medical text-xl mb-1"></i><span class="text-[10px] font-bold mt-1">Saúde</span></button>
+      <button onclick="switchMainTab('social')" id="nav-social" class="nav-btn w-1/5 text-gray-400"><i class="fa-solid fa-globe text-xl mb-1"></i><span class="text-[10px] font-bold mt-1">Rede</span></button>
+      <button onclick="switchMainTab('cursos')" id="nav-cursos" class="nav-btn w-1/5 text-gray-400"><i class="fa-solid fa-graduation-cap text-xl mb-1"></i><span class="text-[10px] font-bold mt-1">Cursos</span></button>
+      <button onclick="switchMainTab('inspiracao')" id="nav-inspiracao" class="nav-btn w-1/5 text-gray-400"><i class="fa-solid fa-heart text-xl mb-1"></i><span class="text-[10px] font-bold mt-1">Apoio</span></button>
+    </nav>
+
+    <!-- WIDGET S.O.S EMERGÊNCIA -->
+    <div class="fixed right-4 bottom-[90px] z-[9999] flex flex-col gap-3 items-center">
+      <div id="sos-popup" class="hidden absolute bottom-[60px] right-0 bg-white rounded-3xl shadow-2xl p-6 w-[280px] text-left border border-red-100">
+        <h3 class="font-bold text-orange-500 flex items-center mb-2"><i class="fa-solid fa-location-dot mr-2"></i> Localização S.O.S</h3>
+        <p class="text-[11px] text-gray-500 mb-4">Mandaremos seu GPS para este WhatsApp.</p>
+        <input type="tel" id="sos-phone" value="19999187697" placeholder="Zap (Ex: 11999999999)" class="w-full p-4 border border-gray-200 rounded-xl mb-4 text-sm outline-none bg-gray-50 font-bold text-gray-700">
+        <button onclick="enviarLocalizacaoSOS()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-xl shadow-md mb-4 flex justify-center gap-2"><i class="fa-brands fa-whatsapp text-lg mr-2"></i> Pedir Ajuda</button>
+        <h3 class="font-bold text-red-600 border-t border-red-100 pt-4 mb-2">🚨 Ligar Rápido</h3>
+        <a href="tel:190" class="block w-full bg-blue-800 text-white text-center py-3 rounded-xl font-bold"><i class="fa-solid fa-shield-halved mr-1"></i> 190 Polícia</a>
+      </div>
+      <div id="sos-btn-circle" onclick="toggleSOS()" class="cursor-pointer w-14 h-14 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex justify-center items-center shadow-[0_8px_20px_rgba(229,57,53,0.4)] border-2 border-white transition-transform hover:scale-105 animate-pulse">
+        <i class="fa-solid fa-bell text-white text-2xl"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISUALIZADOR DE PDF RENDERIZADO NO CANVAS -->
+  <div id="pdf-modal" class="fixed inset-0 bg-gray-900 z-[99999] hidden flex-col transition-transform transform translate-y-full duration-300">
+    
+    <!-- WIDGET FLUTUANTE DE ACESSIBILIDADE E VOZ -->
+    <div class="absolute top-4 left-4 right-4 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-2xl flex justify-between items-center z-10 border border-gray-200">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-brand-purple text-white rounded-full flex justify-center items-center text-xl"><i class="fa-solid fa-file-pdf"></i></div>
+        <div>
+          <h3 class="font-bold text-gray-800 text-sm">Leitor Acessível</h3>
+          <p id="pdf-status" class="text-[10px] text-gray-500">Preparando áudio...</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="lerAudioPDF()" title="Ouvir" class="w-10 h-10 bg-brand-green text-white rounded-full flex justify-center items-center shadow-md hover:scale-105 transition"><i class="fa-solid fa-play"></i></button>
+        <button onclick="pararAudioPDF()" title="Pausar" class="w-10 h-10 bg-brand-orange text-white rounded-full flex justify-center items-center shadow-md hover:scale-105 transition"><i class="fa-solid fa-pause"></i></button>
+        <button onclick="fecharModalPDF()" title="Fechar PDF" class="w-10 h-10 bg-red-500 text-white rounded-full flex justify-center items-center shadow-md hover:scale-105 transition"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+
+    <!-- O PDF SERÁ DESENHADO AQUI -->
+    <div id="pdf-viewer-container" class="w-full h-full pt-24 pb-20 overflow-y-auto bg-gray-200 px-2 flex flex-col items-center">
+    </div>
+  </div>
+
+  <!-- LÓGICA DO SISTEMA -->
+  <script>
+    let globalSoundEnabled = false; 
+    function falarTexto(texto, force = false) {
+      if(!globalSoundEnabled && !force) return;
+      if(!texto) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(texto);
+      utterance.lang = 'pt-BR'; 
+      window.speechSynthesis.speak(utterance);
+    }
+    
+    function toggleGlobalSoundMenu(checkbox) {
+      globalSoundEnabled = checkbox.checked;
+      if(globalSoundEnabled) falarTexto("Leitura automática ativada.", true);
+      else window.speechSynthesis.cancel();
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (sidebar.classList.contains('sidebar-closed')) {
+        sidebar.classList.remove('sidebar-closed'); sidebar.classList.add('sidebar-open');
+        overlay.classList.remove('hidden');
+        falarTexto("Menu principal aberto", true);
+      } else {
+        sidebar.classList.remove('sidebar-open'); sidebar.classList.add('sidebar-closed');
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function toggleSOS() {
+      document.getElementById('sos-popup').classList.toggle('hidden');
+      if(!document.getElementById('sos-popup').classList.contains('hidden')) falarTexto("Menu de Emergência aberto.", true);
+    }
+
+    function closePopupsOnClickOutside(event) {
+      const sosPopup = document.getElementById('sos-popup');
+      const sosBtn = document.getElementById('sos-btn-circle');
+      if (!sosPopup.classList.contains('hidden') && !sosPopup.contains(event.target) && !sosBtn.contains(event.target)) {
+        sosPopup.classList.add('hidden');
+      }
+    }
+
+    let currentTextSize = 1;
+    function toggleA11yFeature(feature) {
+      const body = document.body;
+      if(feature === 'dyslexia') { body.classList.toggle('a11y-dyslexia'); falarTexto("Fonte alterada", true); }
+      if(feature === 'autism') { body.classList.toggle('a11y-autism'); falarTexto("Cores alteradas", true); }
+      if(feature === 'contrast') { body.classList.toggle('a11y-contrast'); falarTexto("Contraste alterado", true); }
+      if(feature === 'text+') {
+        body.classList.remove('a11y-text-lg', 'a11y-text-xl');
+        if(currentTextSize === 1) { body.classList.add('a11y-text-lg'); currentTextSize = 2; }
+        else if(currentTextSize === 2) { body.classList.add('a11y-text-xl'); currentTextSize = 3; }
+        falarTexto("Texto aumentado", true);
+      }
+      if(feature === 'text-') {
+        body.classList.remove('a11y-text-lg', 'a11y-text-xl');
+        if(currentTextSize === 3) { body.classList.add('a11y-text-lg'); currentTextSize = 2; }
+        else if(currentTextSize === 2) { currentTextSize = 1; }
+        falarTexto("Texto diminuído", true);
+      }
+    }
+
+    function switchMainTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('active', 'text-brand-blue'); b.classList.add('text-gray-400'); });
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const btn = document.getElementById(`nav-${tabId}`);
+      btn.classList.add('active'); btn.classList.remove('text-gray-400');
+      if(tabId !== 'visao') stopCameraIA(); 
+    }
+
+    function switchSubTab(mainTab, subTabId) {
+      const section = document.getElementById(`tab-${mainTab}`);
+      section.querySelectorAll('.sub-content').forEach(t => { t.classList.add('hidden'); t.classList.remove('block'); });
+      section.querySelectorAll('.subtab-btn').forEach(b => { b.classList.remove('active', 'bg-brand-blue', 'bg-brand-teal', 'bg-brand-green', 'bg-brand-orange', 'bg-yellow-500', 'bg-indigo-500', 'text-white'); b.classList.add('bg-white', 'text-gray-500'); });
+      document.getElementById(`content-${mainTab}-${subTabId}`).classList.remove('hidden');
+      document.getElementById(`content-${mainTab}-${subTabId}`).classList.add('block');
+      const btn = document.getElementById(`subtab-${mainTab}-${subTabId}`);
+      btn.classList.add('active', 'text-white'); btn.classList.remove('bg-white', 'text-gray-500');
+      const cor = mainTab==='visao'?'bg-brand-teal': mainTab==='saude'?'bg-brand-green': mainTab==='social'?'bg-brand-orange': mainTab==='cursos'?'bg-indigo-500': mainTab==='inspiracao'?'bg-brand-blue':'bg-brand-blue';
+      btn.classList.add(cor);
+    }
+    
+    function navFromMenu(mainTab, subTab) {
+      switchMainTab(mainTab);
+      switchSubTab(mainTab, subTab);
+      toggleSidebar();
+    }
+
+    function toggleCadastroType() {
+       const type = document.getElementById('cad-tipo').value;
+       document.getElementById('cad-medico-fields').classList.toggle('hidden', type !== 'medico');
+       document.getElementById('cad-ong-fields').classList.toggle('hidden', type !== 'ong');
+       document.getElementById('cad-guia-fields').classList.toggle('hidden', type !== 'guia');
+    }
+
+    // ---- LÓGICA DO NOVO LEITOR DE PDF COM DIVISÃO DE FRASES ----
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    
+    let textoOcultoParaLer = "";
+    let frasesParaLer = [];
+    let indiceFraseAtual = 0;
+    let lendoPDF = false;
+
+    async function abrirNativoPDF(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (file.type !== "application/pdf") {
+            alert("Por favor, selecione um arquivo PDF.");
+            return;
+        }
+
+        const modal = document.getElementById('pdf-modal');
+        const status = document.getElementById('pdf-status');
+        const viewer = document.getElementById('pdf-viewer-container');
+        
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        setTimeout(() => { modal.classList.remove('translate-y-full'); }, 10);
+        
+        status.innerText = "Carregando páginas...";
+        viewer.innerHTML = '<div class="mt-20 text-center text-gray-500 font-bold"><i class="fa-solid fa-circle-notch fa-spin text-4xl mb-4 text-brand-purple"></i><br>Renderizando PDF...</div>';
+        
+        textoOcultoParaLer = ""; 
+        pararAudioPDF(); 
+
+        const fileReader = new FileReader();
+        fileReader.onload = async function() {
+            const typedarray = new Uint8Array(this.result);
+            try {
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                let fullText = "";
+                const numPages = pdf.numPages;
+                viewer.innerHTML = ''; 
+                
+                for (let i = 1; i <= numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + ". "; 
+
+                    const viewport = page.getViewport({ scale: 1.5 }); 
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    canvas.className = "w-full max-w-full h-auto mb-4 shadow-lg rounded bg-white";
+                    viewer.appendChild(canvas);
+                    
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                }
+
+                textoOcultoParaLer = fullText;
+                frasesParaLer = textoOcultoParaLer.match(/[^.!?\n]+[.!?\n]+/g) || [textoOcultoParaLer];
+                
+                status.innerText = `Pronto! ${numPages} páginas.`;
+                falarTexto(`O P D F foi carregado com sucesso. Clique no botão verde de Play para ouvir.`, true);
+
+            } catch (error) {
+                status.innerText = "Erro ao abrir PDF.";
+                viewer.innerHTML = '<div class="mt-20 text-center text-red-500 font-bold">Não foi possível carregar este PDF. Ele pode estar protegido com senha.</div>';
+                falarTexto("Desculpe, ocorreu um erro ao desenhar o PDF.", true);
+            }
+        };
+        fileReader.readAsArrayBuffer(file);
+    }
+
+    function fecharModalPDF() {
+        const modal = document.getElementById('pdf-modal');
+        modal.classList.add('translate-y-full');
+        setTimeout(() => { 
+            modal.classList.add('hidden'); 
+            modal.style.display = '';
+            document.getElementById('pdf-viewer-container').innerHTML = ''; 
+        }, 300);
+        pararAudioPDF();
+    }
+
+    function lerAudioPDF() {
+        if(frasesParaLer.length === 0) {
+            falarTexto("Ainda estou extraindo o texto, aguarde um segundo.", true);
+            return;
+        }
+        
+        if (lendoPDF) return; 
+        
+        window.speechSynthesis.cancel();
+        lendoPDF = true;
+        
+        if(indiceFraseAtual >= frasesParaLer.length) {
+            indiceFraseAtual = 0; 
+        }
+        
+        falarProximaFrase();
+    }
+
+    function falarProximaFrase() {
+        if (!lendoPDF) return; 
+        
+        if (indiceFraseAtual < frasesParaLer.length) {
+            let textoDaVez = frasesParaLer[indiceFraseAtual].trim();
+            
+            if (textoDaVez.length === 0) {
+                indiceFraseAtual++;
+                falarProximaFrase();
+                return;
+            }
+            
+            let utterance = new SpeechSynthesisUtterance(textoDaVez);
+            utterance.lang = 'pt-BR';
+            
+            utterance.onend = function() {
+                indiceFraseAtual++;
+                falarProximaFrase();
+            };
+            
+            utterance.onerror = function() {
+                indiceFraseAtual++;
+                falarProximaFrase();
+            };
+            
+            window.speechSynthesis.speak(utterance);
+        } else {
+            lendoPDF = false;
+            indiceFraseAtual = 0;
+            falarTexto("Fim do documento.", true);
+        }
+    }
+
+    function pararAudioPDF() {
+        lendoPDF = false;
+        window.speechSynthesis.cancel();
+        falarTexto("Pausado.", true);
+    }
+
+    // ---- Câmera IA ----
+    const videoIA = document.getElementById('video-ia');
+    const outputIA = document.getElementById('output-ia');
+    let streamIA = null; let detectando = false; let lastSpokenIA = ""; let lastTimeIA = 0;
+    let cameraModeIA = 'environment';
+    let powerCam = false;
+
+    function togglePowerCamera() {
+      const btn = document.getElementById('btn-power-cam');
+      powerCam = !powerCam;
+      if(powerCam) { btn.classList.replace('bg-brand-green', 'bg-red-500'); startCameraIA(cameraModeIA); } 
+      else { btn.classList.replace('bg-red-500', 'bg-brand-green'); stopCameraIA(); }
+    }
+
+    function flipCamera() {
+      if(!powerCam) { alert("Ligue a câmera primeiro!"); return; }
+      cameraModeIA = cameraModeIA === 'environment' ? 'user' : 'environment';
+      startCameraIA(cameraModeIA);
+      falarTexto("Câmera " + (cameraModeIA === 'user' ? "Frontal" : "Traseira"), true);
+    }
+
+    function toggleFullscreenIA() {
+      const container = document.getElementById('camera-container-wrapper');
+      if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(err => {});
+        falarTexto("Tela cheia ativada.", true);
+      } else { document.exitFullscreen(); falarTexto("Tela cheia desativada.", true); }
+    }
+
+    async function startCameraIA(mode) {
+      if (streamIA) streamIA.getTracks().forEach(t => t.stop());
+      try {
+        streamIA = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
+        videoIA.srcObject = streamIA; detectando = true; runTF();
+      } catch (e) {}
+    }
+    
+    function stopCameraIA() {
+      detectando = false; powerCam = false;
+      document.getElementById('btn-power-cam').classList.replace('bg-red-500', 'bg-brand-green');
+      if (streamIA) { streamIA.getTracks().forEach(t => t.stop()); streamIA = null; }
+    }
+    
+    async function runTF() {
+      const model = await cocoSsd.load();
+      const loop = async () => {
+        if (!detectando) return;
+        const preds = await model.detect(videoIA);
+        if (preds.length > 0) {
+          const raw = preds[0].class;
+          outputIA.innerText = `[ ${raw} ]`;
+        }
+        requestAnimationFrame(loop);
+      }; loop();
+    }
+
+    function processOCR(e) {
+      const f = e.target.files[0]; if(!f) return;
+      document.getElementById('ocr-loading').classList.remove('hidden'); document.getElementById('ocr-result-container').classList.add('hidden');
+      falarTexto("Lendo imagem da câmera", true);
+      Tesseract.recognize(f, 'por+eng').then(({ data: { text } }) => {
+          document.getElementById('ocr-loading').classList.add('hidden'); document.getElementById('ocr-result-container').classList.remove('hidden');
+          if(text.trim()) { document.getElementById('ocr-text').innerText = text; falarTexto("Texto extraído com sucesso.", true); } 
+      });
+    }
+
+    function enviarLocalizacaoSOS() {
+      let zap = document.getElementById('sos-phone').value.replace(/\D/g, '');
+      if(zap.length<10) return;
+      if(!zap.startsWith("55")) zap = "55" + zap;
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const link = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
+          window.open(`https://wa.me/${zap}?text=${encodeURIComponent(`🚨 S.O.S! Preciso de ajuda urgente. Meu GPS Exato: ${link}`)}`, '_blank');
+        });
+      }
+    }
+    
+    async function buscarVersiculoNaAPI() {
+      const q = document.getElementById('bible-search').value; if(!q) return;
+      try {
+        const res = await fetch(`https://bible-api.com/${encodeURIComponent(q)}?translation=almeida`);
+        const json = await res.json();
+        document.getElementById('api-result-box').classList.remove('hidden');
+        if(!json.error) {
+          document.getElementById('api-verse-text').innerText = `"${json.text.trim()}"`;
+          document.getElementById('api-verse-ref').innerText = json.reference;
+          falarTexto(`${json.reference}. ${json.text}`, true);
+        }
+      } catch(e) {}
+    }
+  </script>
+</body>
+</html>
